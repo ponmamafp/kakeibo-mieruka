@@ -144,6 +144,44 @@ canvas { max-height:260px; }
 .badge-type { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; }
 .badge-type.income  { background:var(--green-bg); color:var(--green); }
 .badge-type.expense { background:var(--red-bg); color:var(--red); }
+
+/* COMPARE & ANNUAL */
+.compare-month-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:18px; }
+.compare-month-nav button { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--text); }
+.compare-month-nav button:hover { border-color:var(--accent); color:var(--accent); }
+.compare-month-nav .current-month { font-size:16px; font-weight:900; color:var(--accent); min-width:140px; text-align:center; }
+
+.compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+.compare-card { border-radius:14px; padding:14px 16px; border:1.5px solid var(--border); background:var(--surface); }
+.compare-card-label { font-size:10px; font-weight:700; letter-spacing:1px; color:var(--text2); margin-bottom:6px; }
+.compare-card-val { font-size:20px; font-weight:900; }
+.compare-card-diff { font-size:12px; font-weight:700; margin-top:4px; }
+.compare-card-diff.up { color:var(--red); }
+.compare-card-diff.down { color:var(--green); }
+.compare-card-diff.neutral { color:var(--text2); }
+.compare-card-diff.income-up { color:var(--green); }
+.compare-card-diff.income-down { color:var(--red); }
+
+.compare-cat-table { width:100%; border-collapse:collapse; font-size:13px; }
+.compare-cat-table th { background:var(--surface2); color:var(--text2); font-size:10px; letter-spacing:1px; padding:8px 8px; text-align:left; border-bottom:2px solid var(--border); white-space:nowrap; }
+.compare-cat-table td { padding:9px 8px; border-bottom:1px solid var(--border); }
+.compare-cat-table tr:last-child td { border-bottom:none; }
+
+.annual-chart-wrap { background:var(--surface); border-radius:18px; border:1.5px solid var(--border); padding:20px; margin-bottom:18px; box-shadow:0 2px 12px rgba(224,123,79,0.07); }
+.annual-summary-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:18px; }
+.annual-summary-grid .sum-box { min-width:0; }
+.annual-month-table { width:100%; border-collapse:collapse; font-size:12px; }
+.annual-month-table th { background:var(--surface2); color:var(--text2); font-size:10px; letter-spacing:1px; padding:8px 6px; text-align:right; border-bottom:2px solid var(--border); white-space:nowrap; }
+.annual-month-table th:first-child { text-align:left; }
+.annual-month-table td { padding:8px 6px; border-bottom:1px solid var(--border); text-align:right; }
+.annual-month-table td:first-child { text-align:left; font-weight:700; }
+.annual-month-table tr:last-child td { border-bottom:none; }
+.annual-month-table tr.total-row td { font-weight:900; background:var(--surface2); }
+.annual-year-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:18px; }
+.annual-year-nav button { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--text); }
+.annual-year-nav button:hover { border-color:var(--accent); color:var(--accent); }
+.annual-year-nav .current-year { font-size:16px; font-weight:900; color:var(--accent); min-width:80px; text-align:center; }
+.page-tab { font-size:12px; }
 </style>
 </head>
 <body>
@@ -154,8 +192,10 @@ canvas { max-height:260px; }
 </div>
 
 <div class="page-tabs">
-  <button class="page-tab active" id="pageTabMain" onclick="switchPage('main')">📊 ダッシュボード</button>
-  <button class="page-tab" id="pageTabHist" onclick="switchPage('history')">📝 記録履歴</button>
+  <button class="page-tab active" id="pageTabMain" onclick="switchPage('main')">📊 ダッシュ</button>
+  <button class="page-tab" id="pageTabHist" onclick="switchPage('history')">📝 履歴</button>
+  <button class="page-tab" id="pageTabCompare" onclick="switchPage('compare')">📈 前月比較</button>
+  <button class="page-tab" id="pageTabAnnual" onclick="switchPage('annual')">📅 年間分析</button>
   <button class="page-tab" id="pageTabSet"  onclick="switchPage('settings')">⚙️ 設定</button>
 </div>
 
@@ -301,6 +341,79 @@ canvas { max-height:260px; }
   </div>
 </div>
 
+<!-- ============ PAGE: COMPARE ============ -->
+<div class="main" id="pageCompare" style="display:none">
+  <div class="compare-month-nav">
+    <button onclick="changeCompareMonth(-1)">&larr; 前月</button>
+    <div class="current-month" id="compareMonthLabel">2026年4月</div>
+    <button onclick="changeCompareMonth(1)">翌月 &rarr;</button>
+  </div>
+
+  <div class="compare-grid" id="compareCards"></div>
+
+  <div class="card">
+    <div class="card-title">カテゴリ別 前月比較（支出）</div>
+    <div style="overflow-x:auto">
+      <table class="compare-cat-table">
+        <thead>
+          <tr><th>カテゴリ</th><th>前月</th><th>今月</th><th>差額</th><th>増減</th></tr>
+        </thead>
+        <tbody id="compareCatTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="annual-chart-wrap" style="margin-top:18px">
+    <div class="card-title">月別推移（直近6ヶ月）</div>
+    <canvas id="compareChart"></canvas>
+  </div>
+</div>
+
+<!-- ============ PAGE: ANNUAL ============ -->
+<div class="main" id="pageAnnual" style="display:none">
+  <div class="annual-year-nav">
+    <button onclick="changeAnnualYear(-1)">&larr; 前年</button>
+    <div class="current-year" id="annualYearLabel">2026年</div>
+    <button onclick="changeAnnualYear(1)">翌年 &rarr;</button>
+  </div>
+
+  <div class="annual-summary-grid" id="annualSummary"></div>
+
+  <div class="annual-chart-wrap">
+    <div class="card-title">月別 収入・支出推移</div>
+    <canvas id="annualChart"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-title">月別サマリー</div>
+    <div style="overflow-x:auto">
+      <table class="annual-month-table">
+        <thead>
+          <tr><th>月</th><th>収入</th><th>支出</th><th>収支</th></tr>
+        </thead>
+        <tbody id="annualMonthTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="card-title">年間カテゴリ別支出ランキング</div>
+    <div style="overflow-x:auto">
+      <table class="compare-cat-table">
+        <thead>
+          <tr><th>カテゴリ</th><th>年間合計</th><th>月平均</th><th>割合</th></tr>
+        </thead>
+        <tbody id="annualCatTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="annual-chart-wrap" style="margin-top:18px">
+    <div class="card-title">年間支出内訳</div>
+    <canvas id="annualPieChart"></canvas>
+  </div>
+</div>
+
 <!-- ============ PAGE: SETTINGS ============ -->
 <div class="main" id="pageSettings" style="display:none">
   <div class="card">
@@ -346,7 +459,8 @@ canvas { max-height:260px; }
 
 <!-- 月次操作バー -->
 <div class="month-bar">
-  <button class="btn-export" onclick="exportCSV()">📥 CSV出力（履歴＋集計）</button>
+  <button class="btn-export" onclick="exportCSV()">📥 当月CSV</button>
+  <button class="btn-export" onclick="exportFullCSV()" style="background:var(--green)">💾 全履歴バックアップ</button>
   <button class="btn-reset" onclick="resetMonth()">🗑️ 月次リセット</button>
 </div>
 
@@ -389,6 +503,14 @@ function todayStr() {
   return d.getFullYear() + '-' + m + '-' + day;
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function currentYM() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function entriesThisMonth(entries) {
+  const prefix = currentYM();
+  return entries.filter(e => (e.date || '').startsWith(prefix));
+}
 
 function load() {
   // v4: entries are individual records with id + date
@@ -410,7 +532,11 @@ function load() {
     localStorage.setItem('kakeibo_v4', JSON.stringify(migrated));
     return migrated;
   }
-  return { entries:[], goals:[], startDate:'', nickname:'' };
+  return { entries:[], archivedEntries:[], goals:[], startDate:'', nickname:'' };
+}
+
+function getAllEntries(data) {
+  return [...(data.entries || []), ...(data.archivedEntries || [])];
 }
 function save(d) { localStorage.setItem('kakeibo_v4', JSON.stringify(d)); }
 
@@ -423,12 +549,18 @@ function switchPage(p) {
   currentPage = p;
   document.getElementById('pageTabMain').classList.toggle('active', p==='main');
   document.getElementById('pageTabHist').classList.toggle('active', p==='history');
+  document.getElementById('pageTabCompare').classList.toggle('active', p==='compare');
+  document.getElementById('pageTabAnnual').classList.toggle('active', p==='annual');
   document.getElementById('pageTabSet').classList.toggle('active', p==='settings');
   document.getElementById('pageMain').style.display     = p==='main'     ? 'block' : 'none';
   document.getElementById('pageHistory').style.display  = p==='history'  ? 'block' : 'none';
+  document.getElementById('pageCompare').style.display  = p==='compare'  ? 'block' : 'none';
+  document.getElementById('pageAnnual').style.display   = p==='annual'   ? 'block' : 'none';
   document.getElementById('pageSettings').style.display = p==='settings' ? 'block' : 'none';
   if (p === 'history')  renderHistory();
   if (p === 'settings') renderSettings();
+  if (p === 'compare')  renderCompare();
+  if (p === 'annual')   renderAnnual();
 }
 
 function renderGoalCatButtons() {
@@ -610,7 +742,8 @@ function render() {
     document.getElementById('periodWrap').style.display = 'none';
   }
 
-  const aggregated    = aggregateByCategory(data.entries);
+  const thisMonthEntries = entriesThisMonth(data.entries);
+  const aggregated    = aggregateByCategory(thisMonthEntries);
   const incomeAgg     = aggregated.filter(e => e.type === 'income');
   const expenseAgg    = aggregated.filter(e => e.type === 'expense');
   const totalIncome   = incomeAgg.reduce((s, e) => s + e.amount, 0);
@@ -820,6 +953,13 @@ function addEntry() {
   const err = document.getElementById('errMsg');
   if (!kw) { err.textContent = 'カテゴリを選択してください'; return; }
   if (isNaN(amt) || amt <= 0) { err.textContent = '金額を正しく入力してください'; return; }
+  // 当月以外の日付チェック
+  const inputYM = date.slice(0, 7);
+  const nowYM = currentYM();
+  if (inputYM !== nowYM) {
+    const ymLabel = date.slice(0, 7).replace('-', '年') + '月';
+    if (!confirm(`入力日付が今月ではありません（${ymLabel}）。\nこのまま記録しますか？\n※ 今月のダッシュボード・予算管理には反映されません`)) return;
+  }
   err.textContent = '';
   const data = load();
   data.entries.push({ id: uid(), date, name: kw, amount: amt, type: currentTab });
@@ -862,14 +1002,17 @@ function exportCSV() {
   const now = new Date();
   const ym = now.getFullYear() + '年' + (now.getMonth()+1) + '月';
   const name = data.nickname ? data.nickname + 'の' : '';
+  const monthly = entriesThisMonth(data.entries);
+
+  if (monthly.length === 0) { alert('今月のデータがありません'); return; }
 
   let csv = '\uFEFF日付,種別,カテゴリ,金額\n';
-  const sorted = [...data.entries].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const sorted = [...monthly].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   sorted.forEach(e => {
     csv += `${e.date || ''},${e.type === 'income' ? '収入' : '支出'},${e.name},${e.amount}\n`;
   });
-  const totalIncome  = data.entries.filter(e => e.type==='income').reduce((s,e)=>s+e.amount,0);
-  const totalExpense = data.entries.filter(e => e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const totalIncome  = monthly.filter(e => e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const totalExpense = monthly.filter(e => e.type==='expense').reduce((s,e)=>s+e.amount,0);
   csv += `\n,,収入合計,${totalIncome}\n,,支出合計,${totalExpense}\n,,収支バランス,${totalIncome - totalExpense}\n`;
 
   const a = document.createElement('a');
@@ -880,9 +1023,38 @@ function exportCSV() {
   document.body.removeChild(a);
 }
 
-function resetMonth() {
-  if (!confirm('今月のデータをリセットしますか？\n（先にCSV出力しておくことをおすすめします）')) return;
+function exportFullCSV() {
   const data = load();
+  const all = getAllEntries(data);
+  const name = data.nickname ? data.nickname + 'の' : '';
+  const today = todayStr();
+
+  if (all.length === 0) { alert('データがありません'); return; }
+
+  // Sort all entries by date
+  const sorted = [...all].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  let csv = '\uFEFF日付,種別,カテゴリ,金額\n';
+  sorted.forEach(e => {
+    csv += `${e.date || ''},${e.type === 'income' ? '収入' : '支出'},${e.name},${e.amount}\n`;
+  });
+  const totalIncome = all.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const totalExpense = all.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  csv += `\n,,収入合計,${totalIncome}\n,,支出合計,${totalExpense}\n,,収支バランス,${totalIncome - totalExpense}\n`;
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `${name}家計全履歴_${today}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function resetMonth() {
+  if (!confirm('今月のデータをリセットしますか？\n（データは全履歴バックアップCSVからいつでも取り出せます）')) return;
+  const data = load();
+  if (!data.archivedEntries) data.archivedEntries = [];
+  data.archivedEntries.push(...data.entries);
   data.entries = [];
   save(data);
   render();
@@ -895,6 +1067,308 @@ document.getElementById('nickname').addEventListener('change', () => {
   const d = load(); d.nickname = document.getElementById('nickname').value; save(d); render();
 });
 document.getElementById('inputAmount').addEventListener('keydown', e => { if (e.key === 'Enter') addEntry(); });
+
+// ========== COMPARE (前月比較) ==========
+let compareYear = new Date().getFullYear();
+let compareMonth = new Date().getMonth() + 1; // 1-based
+let compareChartInstance = null;
+
+function changeCompareMonth(delta) {
+  compareMonth += delta;
+  if (compareMonth > 12) { compareMonth = 1; compareYear++; }
+  if (compareMonth < 1)  { compareMonth = 12; compareYear--; }
+  renderCompare();
+}
+
+function getEntriesForMonth(entries, year, month) {
+  const prefix = year + '-' + String(month).padStart(2, '0');
+  return entries.filter(e => (e.date || '').startsWith(prefix));
+}
+
+function renderCompare() {
+  const data = load();
+  const entries = getAllEntries(data);
+
+  document.getElementById('compareMonthLabel').textContent = compareYear + '年' + compareMonth + '月';
+
+  const cur = getEntriesForMonth(entries, compareYear, compareMonth);
+  let prevY = compareYear, prevM = compareMonth - 1;
+  if (prevM < 1) { prevM = 12; prevY--; }
+  const prev = getEntriesForMonth(entries, prevY, prevM);
+
+  const curIncome  = cur.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const curExpense = cur.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const prevIncome  = prev.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const prevExpense = prev.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const curBalance = curIncome - curExpense;
+  const prevBalance = prevIncome - prevExpense;
+
+  function diffTag(cur, prev, type) {
+    const d = cur - prev;
+    if (prev === 0 && cur === 0) return '<span class="compare-card-diff neutral">-- データなし</span>';
+    if (prev === 0) return '<span class="compare-card-diff neutral">前月データなし</span>';
+    const pct = Math.round((d / prev) * 100);
+    if (type === 'income') {
+      const cls = d > 0 ? 'income-up' : d < 0 ? 'income-down' : 'neutral';
+      return `<span class="compare-card-diff ${cls}">${d > 0 ? '▲' : d < 0 ? '▼' : '→'} ¥${Math.abs(d).toLocaleString()} (${d >= 0 ? '+' : ''}${pct}%)</span>`;
+    } else if (type === 'expense') {
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'neutral';
+      return `<span class="compare-card-diff ${cls}">${d > 0 ? '▲' : d < 0 ? '▼' : '→'} ¥${Math.abs(d).toLocaleString()} (${d >= 0 ? '+' : ''}${pct}%)</span>`;
+    } else {
+      const cls = d >= 0 ? 'down' : 'up';
+      return `<span class="compare-card-diff ${cls}">${d > 0 ? '▲' : d < 0 ? '▼' : '→'} ¥${Math.abs(d).toLocaleString()}</span>`;
+    }
+  }
+
+  document.getElementById('compareCards').innerHTML = `
+    <div class="compare-card">
+      <div class="compare-card-label">収入</div>
+      <div class="compare-card-val" style="color:var(--green)">¥${curIncome.toLocaleString()}</div>
+      ${diffTag(curIncome, prevIncome, 'income')}
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">前月: ¥${prevIncome.toLocaleString()}</div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-card-label">支出</div>
+      <div class="compare-card-val" style="color:var(--red)">¥${curExpense.toLocaleString()}</div>
+      ${diffTag(curExpense, prevExpense, 'expense')}
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">前月: ¥${prevExpense.toLocaleString()}</div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-card-label">収支バランス</div>
+      <div class="compare-card-val" style="color:${curBalance >= 0 ? 'var(--green)' : 'var(--red)'}">¥${curBalance.toLocaleString()}</div>
+      ${diffTag(curBalance, prevBalance, 'balance')}
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">前月: ¥${prevBalance.toLocaleString()}</div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-card-label">記録件数</div>
+      <div class="compare-card-val" style="color:var(--accent)">${cur.length}件</div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px">前月: ${prev.length}件</div>
+    </div>
+  `;
+
+  // Category comparison table (expense)
+  const curExpByCat = {};
+  const prevExpByCat = {};
+  cur.filter(e => e.type === 'expense').forEach(e => { curExpByCat[e.name] = (curExpByCat[e.name] || 0) + e.amount; });
+  prev.filter(e => e.type === 'expense').forEach(e => { prevExpByCat[e.name] = (prevExpByCat[e.name] || 0) + e.amount; });
+  const allCats = [...new Set([...Object.keys(curExpByCat), ...Object.keys(prevExpByCat)])];
+  allCats.sort((a, b) => ((curExpByCat[b] || 0) - (curExpByCat[a] || 0)));
+
+  const tbody = document.getElementById('compareCatTbody');
+  tbody.innerHTML = '';
+  if (allCats.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">データがありません</td></tr>';
+  } else {
+    allCats.forEach(cat => {
+      const c = curExpByCat[cat] || 0;
+      const p = prevExpByCat[cat] || 0;
+      const d = c - p;
+      const info = catInfo(cat, 'expense');
+      const tr = document.createElement('tr');
+      const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '→';
+      const color = d > 0 ? 'var(--red)' : d < 0 ? 'var(--green)' : 'var(--text2)';
+      tr.innerHTML = `
+        <td>${info.icon} ${cat}</td>
+        <td>¥${p.toLocaleString()}</td>
+        <td style="font-weight:700">¥${c.toLocaleString()}</td>
+        <td style="color:${color};font-weight:700">${arrow} ¥${Math.abs(d).toLocaleString()}</td>
+        <td style="color:${color};font-weight:700">${p > 0 ? ((d >= 0 ? '+' : '') + Math.round((d/p)*100) + '%') : (c > 0 ? 'NEW' : '--')}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // 6-month trend chart
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    let y = compareYear, m = compareMonth - i;
+    while (m < 1) { m += 12; y--; }
+    months.push({ y, m, label: m + '月' });
+  }
+  const incomeData = months.map(({ y, m }) => getEntriesForMonth(entries, y, m).filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0));
+  const expenseData = months.map(({ y, m }) => getEntriesForMonth(entries, y, m).filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0));
+
+  const ctx = document.getElementById('compareChart').getContext('2d');
+  if (compareChartInstance) compareChartInstance.destroy();
+  compareChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.label),
+      datasets: [
+        { label: '収入', data: incomeData, backgroundColor: 'rgba(46,158,107,0.6)', borderColor: '#2e9e6b', borderWidth: 2, borderRadius: 6 },
+        { label: '支出', data: expenseData, backgroundColor: 'rgba(224,92,92,0.6)', borderColor: '#e05c5c', borderWidth: 2, borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ¥' + c.raw.toLocaleString() } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f0e8e0' }, ticks: { callback: v => '¥' + (v/10000).toFixed(0) + '万', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ========== ANNUAL (年間分析) ==========
+let annualYear = new Date().getFullYear();
+let annualChartInstance = null;
+let annualPieInstance = null;
+
+function changeAnnualYear(delta) {
+  annualYear += delta;
+  renderAnnual();
+}
+
+function renderAnnual() {
+  const data = load();
+  const entries = getAllEntries(data);
+
+  document.getElementById('annualYearLabel').textContent = annualYear + '年';
+
+  const yearEntries = entries.filter(e => (e.date || '').startsWith(annualYear + '-'));
+  const totalIncome  = yearEntries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const totalExpense = yearEntries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const balance = totalIncome - totalExpense;
+
+  document.getElementById('annualSummary').innerHTML = `
+    <div class="sum-box income-box">
+      <div class="sum-box-label">年間収入</div>
+      <div class="sum-box-val">¥${totalIncome.toLocaleString()}</div>
+    </div>
+    <div class="sum-box expense-box">
+      <div class="sum-box-label">年間支出</div>
+      <div class="sum-box-val">¥${totalExpense.toLocaleString()}</div>
+    </div>
+    <div class="sum-box balance-box">
+      <div class="sum-box-label">年間収支</div>
+      <div class="sum-box-val" style="color:${balance >= 0 ? 'var(--green)' : 'var(--red)'}">¥${balance.toLocaleString()}</div>
+    </div>
+  `;
+
+  // Monthly breakdown
+  const monthlyIncome = [], monthlyExpense = [];
+  for (let m = 1; m <= 12; m++) {
+    const me = getEntriesForMonth(entries, annualYear, m);
+    monthlyIncome.push(me.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0));
+    monthlyExpense.push(me.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0));
+  }
+
+  // Month table
+  const mtbody = document.getElementById('annualMonthTbody');
+  mtbody.innerHTML = '';
+  let sumI = 0, sumE = 0;
+  for (let m = 0; m < 12; m++) {
+    const inc = monthlyIncome[m];
+    const exp = monthlyExpense[m];
+    const bal = inc - exp;
+    sumI += inc; sumE += exp;
+    if (inc === 0 && exp === 0) continue;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m + 1}月</td>
+      <td style="color:var(--green)">¥${inc.toLocaleString()}</td>
+      <td style="color:var(--red)">¥${exp.toLocaleString()}</td>
+      <td style="color:${bal >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:700">${bal >= 0 ? '+' : ''}¥${bal.toLocaleString()}</td>
+    `;
+    mtbody.appendChild(tr);
+  }
+  if (sumI > 0 || sumE > 0) {
+    const trT = document.createElement('tr');
+    trT.className = 'total-row';
+    const tbal = sumI - sumE;
+    trT.innerHTML = `
+      <td>合計</td>
+      <td style="color:var(--green)">¥${sumI.toLocaleString()}</td>
+      <td style="color:var(--red)">¥${sumE.toLocaleString()}</td>
+      <td style="color:${tbal >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:900">${tbal >= 0 ? '+' : ''}¥${tbal.toLocaleString()}</td>
+    `;
+    mtbody.appendChild(trT);
+  } else {
+    mtbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px">この年のデータはありません</td></tr>';
+  }
+
+  // Annual bar chart
+  const ctx = document.getElementById('annualChart').getContext('2d');
+  if (annualChartInstance) annualChartInstance.destroy();
+  annualChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Array.from({ length: 12 }, (_, i) => (i + 1) + '月'),
+      datasets: [
+        { label: '収入', data: monthlyIncome, backgroundColor: 'rgba(46,158,107,0.6)', borderColor: '#2e9e6b', borderWidth: 2, borderRadius: 6 },
+        { label: '支出', data: monthlyExpense, backgroundColor: 'rgba(224,92,92,0.6)', borderColor: '#e05c5c', borderWidth: 2, borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ¥' + c.raw.toLocaleString() } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f0e8e0' }, ticks: { callback: v => '¥' + (v / 10000).toFixed(0) + '万', font: { size: 10 } } }
+      }
+    }
+  });
+
+  // Category ranking
+  const catMap = {};
+  yearEntries.filter(e => e.type === 'expense').forEach(e => {
+    catMap[e.name] = (catMap[e.name] || 0) + e.amount;
+  });
+  const catArr = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const activeMonths = monthlyExpense.filter(v => v > 0).length || 1;
+  const ctbody = document.getElementById('annualCatTbody');
+  ctbody.innerHTML = '';
+  if (catArr.length === 0) {
+    ctbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px">データがありません</td></tr>';
+  } else {
+    catArr.forEach(([cat, amount]) => {
+      const info = catInfo(cat, 'expense');
+      const pct = totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0;
+      const avg = Math.round(amount / activeMonths);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${info.icon} ${cat}</td>
+        <td style="font-weight:700">¥${amount.toLocaleString()}</td>
+        <td>¥${avg.toLocaleString()}/月</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:50px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${info.color};border-radius:3px"></div>
+            </div>
+            <span style="font-weight:700">${pct}%</span>
+          </div>
+        </td>
+      `;
+      ctbody.appendChild(tr);
+    });
+  }
+
+  // Pie chart
+  const pieCtx = document.getElementById('annualPieChart').getContext('2d');
+  if (annualPieInstance) annualPieInstance.destroy();
+  if (catArr.length > 0) {
+    annualPieInstance = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: catArr.map(([cat]) => { const i = catInfo(cat, 'expense'); return i.icon + ' ' + cat; }),
+        datasets: [{
+          data: catArr.map(([, v]) => v),
+          backgroundColor: catArr.map(([cat]) => catInfo(cat, 'expense').color + 'cc'),
+          borderColor: catArr.map(([cat]) => catInfo(cat, 'expense').color),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+          tooltip: { callbacks: { label: c => c.label + ': ¥' + c.raw.toLocaleString() + ' (' + (totalExpense > 0 ? Math.round((c.raw / totalExpense) * 100) : 0) + '%)' } }
+        }
+      }
+    });
+  }
+}
 
 // init input date to today
 document.getElementById('inputDate').value = todayStr();
