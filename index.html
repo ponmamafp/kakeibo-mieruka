@@ -1550,8 +1550,7 @@ function renderReview() {
       <div class="label">⭐ 特別費</div>
       <div class="val" style="color:#7b5ea7">¥${specialAmt.toLocaleString()}</div>
     </div>
-  ` + (satisfactionScore !== null ? `<div style="width:100%;text-align:center;font-size:13px;font-weight:900;color:var(--green);margin-top:8px">お金の満足度 ${satisfactionScore}%（チェック済み${taggedCnt}件中）</div>` : '')
-    + (unchk > 0 ? `<div style="width:100%;text-align:center;font-size:11px;color:var(--text2);margin-top:2px">未チェック ${unchk}件</div>` : '');
+  `;
 
   expenses.forEach(e => {
     const info = catInfo(e.name, 'expense');
@@ -1758,6 +1757,65 @@ function removeGoal(cat) {
   save(data); render();
 }
 
+// CSV保存（スマホ＝共有シート「ファイルに保存」／PC＝ダウンロード／最終手段＝コピー保存）
+function saveCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // 1) スマホ：共有シート（「ファイルに保存」やLINE/メールで自分に送れる）
+  try {
+    if (navigator.canShare) {
+      const file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: filename }).catch(err => {
+          if (!err || err.name !== 'AbortError') showCsvFallback(csv);
+        });
+        return;
+      }
+    }
+  } catch (e) {}
+  // 2) PC：ダウンロード（スマホは見つけにくいので下のコピー保存に回す）
+  if (!isMobile) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      return;
+    } catch (e) {}
+  }
+  // 3) 最終手段：コピーして保存できるモーダル（どの端末でも必ずデータを取り出せる）
+  showCsvFallback(csv);
+}
+
+// CSVをコピーして保存できる画面（共有・ダウンロードが使えない端末向け）
+function showCsvFallback(csv) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:14px;max-width:480px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,0.25)';
+  box.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#2c1a0e">📋 データをコピーして保存</div>'
+    + '<div style="font-size:12px;color:#666;line-height:1.6;margin-bottom:10px">下のデータを「全部コピー」して、メモ帳・メール・表計算アプリなどに貼り付けて保存できます（機種変のバックアップにも使えます）。</div>'
+    + '<textarea readonly style="flex:1;min-height:150px;width:100%;font-size:11px;font-family:monospace;border:1px solid #ddd;border-radius:8px;padding:8px;resize:none;box-sizing:border-box"></textarea>'
+    + '<div style="display:flex;gap:8px;margin-top:12px"><button id="csvCopyBtn" style="flex:1;padding:13px;border:none;border-radius:10px;background:#e07b4f;color:#fff;font-size:14px;font-weight:700;cursor:pointer">全部コピー</button><button id="csvCloseBtn" style="padding:13px 18px;border:none;border-radius:10px;background:#eee;color:#666;font-size:14px;cursor:pointer">閉じる</button></div>';
+  const ta = box.querySelector('textarea');
+  ta.value = csv;
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+  box.querySelector('#csvCopyBtn').onclick = () => {
+    ta.focus(); ta.select(); ta.setSelectionRange(0, 999999);
+    let ok = false;
+    try { document.execCommand('copy'); ok = true; } catch (e) {}
+    if (navigator.clipboard) { navigator.clipboard.writeText(csv).catch(() => {}); ok = true; }
+    box.querySelector('#csvCopyBtn').textContent = ok ? 'コピーしました ✓' : '長押しでコピーしてね';
+  };
+  box.querySelector('#csvCloseBtn').onclick = () => document.body.removeChild(ov);
+  ov.onclick = (e) => { if (e.target === ov) document.body.removeChild(ov); };
+}
+
 function exportPeriodCSV() {
   const data = load();
   const name = data.nickname ? data.nickname + 'の' : '';
@@ -1774,12 +1832,7 @@ function exportPeriodCSV() {
     const memo = (e.memo || '').replace(/"/g, '""');
     csv += `${e.date || ''},${e.type === 'income' ? '収入' : '支出'},${e.name},${e.amount},${e.tag === 'waste' ? 'ムダ' : e.tag === 'review' ? '見直し' : e.tag === 'satisfied' ? '満足' : ''},${e.special ? '○' : ''},${memo ? '"' + memo + '"' : ''}\n`;
   });
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `${name}家計記録_${periodLabel}_${todayStr()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  saveCSV(csv, `${name}家計記録_${periodLabel}_${todayStr()}.csv`);
 }
 
 function exportFullCSV() {
@@ -1794,12 +1847,7 @@ function exportFullCSV() {
     const memo = (e.memo || '').replace(/"/g, '""');
     csv += `${e.date || ''},${e.type === 'income' ? '収入' : '支出'},${e.name},${e.amount},${e.tag === 'waste' ? 'ムダ' : e.tag === 'review' ? '見直し' : e.tag === 'satisfied' ? '満足' : ''},${e.special ? '○' : ''},${memo ? '"' + memo + '"' : ''}\n`;
   });
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `${name}家計全履歴_${today}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  saveCSV(csv, `${name}家計全履歴_${today}.csv`);
 }
 
 function parseCsvText(text) {
