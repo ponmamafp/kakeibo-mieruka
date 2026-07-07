@@ -403,10 +403,11 @@ canvas { max-height:260px; }
     <div class="card" style="padding:14px">
       <div class="card-title">🔍 振り返り（支出チェック）</div>
       <div class="review-legend">
+        <div class="review-legend-item" style="width:100%;font-weight:700;color:var(--text)">この出費どうだった？（下から1つ選ぶ）</div>
         <div class="review-legend-item"><span>😵 ムダだった</span> → 買わなきゃよかった・衝動買い</div>
         <div class="review-legend-item"><span>🔄 見直せる</span> → もっと安くできた・見直しできそう</div>
-        <div class="review-legend-item"><span>⭐ 特別費</span> → 毎月じゃない大きめの出費（併用OK）</div>
         <div class="review-legend-item"><span>😊 満足</span> → 気持ちよく使えた・後悔なし</div>
+        <div class="review-legend-item" style="width:100%;border-top:1px dashed var(--border);margin-top:5px;padding-top:6px"><span>⭐ 特別費</span> → 毎月じゃない大きめの出費（<strong>別枠</strong>・上のどれとでも一緒に付けてOK）</div>
       </div>
       <div class="review-summary" id="reviewSummary"></div>
       <div id="reviewList"></div>
@@ -603,6 +604,10 @@ canvas { max-height:260px; }
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
       記録はこの端末のブラウザにだけ保存されています。機種変更やデータ消去に備えて、<strong>月イチで全履歴をバックアップ</strong>しておくと安心です。（保存したCSVは「CSV取り込み」で復元できます）
     </div>
+    <div style="font-size:11px;color:var(--text);line-height:1.7;margin-bottom:12px;padding:10px 12px;background:var(--red-bg);border:1px solid var(--red);border-radius:10px">
+      ⚠️ <strong>大事なお願い</strong><br>
+      ホーム画面に追加したアプリを<strong>削除すると、記録データも一緒に消えます</strong>（スマホの仕様です）。更新したいときは「アプリを削除」ではなく、<strong>閉じて開き直す</strong>だけでOK。念のため、ときどき下のボタンでバックアップを取っておくと安心です。
+    </div>
     <button class="btn-export" onclick="exportFullCSV()" style="background:var(--green);width:100%;margin-bottom:16px">💾 全履歴をバックアップ（CSV保存）</button>
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
       記録をすべて削除して、最初からやり直すこともできます（この操作は取り消せません）。
@@ -611,10 +616,11 @@ canvas { max-height:260px; }
   </div>
   <div class="card">
     <div class="card-title">💬 お問い合わせ</div>
-    <div style="font-size:13px;color:var(--text);line-height:1.9">
-      ご質問やご要望は <a href="https://lin.ee/YRS7Mrk" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none">公式LINE</a> までご連絡お願いします！<br>
+    <div style="font-size:13px;color:var(--text);line-height:1.9;margin-bottom:12px">
+      ご質問やご要望は、下のボタンから公式LINEへお気軽にどうぞ！<br>
       <span style="font-size:12px;color:var(--text2)">ご感想もいただけると、とても励みになります！！</span>
     </div>
+    <a href="https://lin.ee/YRS7Mrk" target="_blank" style="display:block;text-align:center;background:#06c755;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:13px;border-radius:12px">💬 公式LINEを開く</a>
   </div>
   <div style="text-align:center;margin-top:18px">
     <a href="https://kakeibo-guide.vercel.app/" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:700">📖 使い方ガイドを見る</a>
@@ -817,6 +823,7 @@ function upsertPresetFixedCost(cat, amountStr) {
     data.fixedCosts.push({ id: uid(), cat, name: cat, amount });
   }
   save(data);
+  renderFixedSettings();
   render();
 }
 function renderFixedCatOptions() {
@@ -1378,13 +1385,14 @@ function render() {
       },
       options: {
         responsive: true,
+        indexAxis: 'y',
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: c => '¥' + c.raw.toLocaleString() + ' (' + (chartTotal > 0 ? Math.round((c.raw / chartTotal) * 100) : 0) + '%)' } }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-          y: { grid: { color: '#f0e8e0' }, ticks: { callback: v => '¥' + (v/10000).toFixed(0) + '万', font: { size: 10 } } }
+          x: { grid: { color: '#f0e8e0' }, ticks: { callback: v => '¥' + (v/10000).toFixed(0) + '万', font: { size: 10 } } },
+          y: { grid: { display: false }, ticks: { font: { size: 12 }, autoSkip: false } }
         }
       }
     });
@@ -1567,11 +1575,14 @@ function renderReview() {
         <div class="review-card-amount">¥${e.amount.toLocaleString()}</div>
       </div>
       <div class="review-card-date">${e.date || ''}</div>
-      <div class="review-tags">
+      <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:5px">この出費どうだった？（1つ選ぶ）</div>
+      <div class="review-tags" style="margin-bottom:8px">
         <button class="review-tag ${tag==='waste'?'sel-waste':''}" onclick="setTag('${e.id}','waste')">😵 ムダ</button>
         <button class="review-tag ${tag==='review'?'sel-review':''}" onclick="setTag('${e.id}','review')">🔄 見直し</button>
         <button class="review-tag ${tag==='satisfied'?'sel-ok':''}" onclick="setTag('${e.id}','satisfied')">😊 満足</button>
-        <span style="border-left:1.5px solid var(--border);margin:0 2px"></span>
+      </div>
+      <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:5px">別枠の印（上と一緒に付けてOK）</div>
+      <div class="review-tags">
         <button class="review-tag ${isSpecial?'sel-special':''}" onclick="toggleSpecial('${e.id}')" style="border-style:dashed">⭐ 特別費</button>
       </div>
       <input class="review-memo" type="text" value="${esc(e.memo)}" placeholder="メモを残す…" onchange="updateMemo('${e.id}',this.value)">
@@ -1906,41 +1917,43 @@ function handleCsvImport(event) {
       const newEntries = [];
       let skipped = 0;
 
-      if (header[0] === '日付') {
-        // フル形式: 日付,種別,カテゴリ,金額,振り返り,特別費,メモ
-        rows.slice(1).forEach(cells => {
-          const [date, typeLabel, cat, amountStr, tagLabel, specialLabel, memo] = cells;
-          if (!date || !cat) return;
-          const nd = normalizeDate(date);
-          if (!nd) { skipped++; return; } // 日付が読めない行はスキップ
-          const amount = parseInt(String(amountStr || '').replace(/[¥,]/g, ''), 10);
-          if (isNaN(amount) || amount <= 0) return;
-          const type = typeLabel === '収入' ? 'income' : 'expense';
-          const tag = tagLabel === 'ムダ' ? 'waste' : tagLabel === '見直し' ? 'review' : tagLabel === '満足' ? 'satisfied' : '';
-          newEntries.push({
-            id: uid(), date: nd, name: cat, amount, type,
-            tag, special: specialLabel === '○', memo: memo || ''
-          });
-        });
-      } else if (header[0] === '種別' && header[1] === 'カテゴリ') {
-        // 簡易形式（無料版など）: 種別,カテゴリ,金額（日付なし・合計行あり）
-        const sharedDate = guessDateFromFilename(file.name);
-        rows.slice(1).forEach(cells => {
-          const [typeLabel, cat, amountStr] = cells;
-          if (!cat || !String(cat).trim()) return; // 合計行はカテゴリが空なので除外
-          const amount = parseInt(String(amountStr || '').replace(/[¥,]/g, ''), 10);
-          if (isNaN(amount) || amount <= 0) return;
-          const type = typeLabel === '収入' ? 'income' : 'expense';
-          newEntries.push({
-            id: uid(), date: sharedDate, name: cat.trim(), amount, type,
-            tag: '', special: false, memo: '(CSVインポート・日付は月初で仮設定)'
-          });
-        });
-      } else {
-        resultEl.textContent = '対応していないCSV形式でした。';
+      // 列名で判定（列の順番・位置が変わってもOK。日付の列があれば必ず保持する）
+      const idx = {};
+      header.forEach((h, i) => { if (idx[h] === undefined) idx[h] = i; });
+      const cellOf = (cells, key) => (idx[key] !== undefined ? cells[idx[key]] : undefined);
+      if (idx['カテゴリ'] === undefined || idx['金額'] === undefined) {
+        resultEl.textContent = '対応していないCSV形式でした。（「カテゴリ」と「金額」の列が見つかりません）';
         event.target.value = '';
         return;
       }
+      const hasDate = idx['日付'] !== undefined;
+      const sharedDate = guessDateFromFilename(file.name);
+      rows.slice(1).forEach(cells => {
+        const cat = String(cellOf(cells, 'カテゴリ') || '').trim();
+        if (!cat) return; // 合計行など（カテゴリが空）は除外
+        const amount = parseInt(String(cellOf(cells, '金額') || '').replace(/[¥,]/g, ''), 10);
+        if (isNaN(amount) || amount <= 0) return;
+        const type = cellOf(cells, '種別') === '収入' ? 'income' : 'expense';
+        const tagLabel = cellOf(cells, '振り返り');
+        const tag = tagLabel === 'ムダ' ? 'waste' : tagLabel === '見直し' ? 'review' : tagLabel === '満足' ? 'satisfied' : '';
+        const special = cellOf(cells, '特別費') === '○';
+        let memo = cellOf(cells, 'メモ') || '';
+        let date;
+        if (hasDate) {
+          const rawDate = String(cellOf(cells, '日付') || '').trim();
+          if (!rawDate) {
+            date = sharedDate; // 日付欄が空のデータ行はファイル名から補完（記録は捨てない）
+          } else {
+            const nd = normalizeDate(rawDate);
+            if (!nd) { skipped++; return; } // 日付は入ってるが読めない行はスキップ
+            date = nd;
+          }
+        } else {
+          date = sharedDate;
+          if (!memo) memo = '(CSVインポート・日付は月初で仮設定)';
+        }
+        newEntries.push({ id: uid(), date, name: cat, amount, type, tag, special, memo });
+      });
 
       if (newEntries.length === 0) { resultEl.textContent = '有効な記録が見つかりませんでした。CSVの形式を確認してください。'; return; }
       const dateNote = newEntries[0].memo && newEntries[0].memo.includes('日付は月初') ? '\n※ この形式には日付情報がないため、月初(1日)の記録として登録します。あとで明細タブから日付を修正できます。' : '';
