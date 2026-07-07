@@ -273,12 +273,6 @@ canvas { max-height:260px; }
     <div class="period-badge">📆 管理開始から <span id="periodDays">0</span> 日目</div>
   </div>
 
-  <div style="text-align:center;font-size:11px;color:var(--text2);line-height:1.7;margin:4px 0 16px;padding:9px 12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)">
-    💡 このダッシュは<strong>今月</strong>の家計です。月が変わると自動で切り替わります。<br>
-    先月より前の記録は <strong>📋明細</strong>（表示期間を変更）・<strong>📈分析</strong> タブでいつでも見られます。<br>
-    <span style="color:var(--accent);font-weight:700">過去の日付でも記録できます</span>（入力欄の日付を変えるだけ）。
-  </div>
-
   <div id="fixedBanner"></div>
 
   <!-- 入力カード -->
@@ -307,6 +301,12 @@ canvas { max-height:260px; }
       <button class="quick-amt-btn" onclick="applyUnit(10000)">万</button>
     </div>
     <div class="error" id="errMsg"></div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--text2);line-height:1.7;margin:0 0 16px;padding:9px 12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)">
+    💡 月が変わると自動で切り替わります。<br>
+    先月以前の記録は、<strong>明細</strong>、<strong>分析</strong>タブでいつでも編集できます。<br>
+    <span style="color:var(--accent);font-weight:700">過去の日付でも記録できます</span>（入力欄の日付を変えるだけ）。
   </div>
 
   <div class="stats-bar">
