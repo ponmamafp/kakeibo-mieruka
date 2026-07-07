@@ -1380,7 +1380,7 @@ function render() {
     chartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: sorted.map(e => e.icon + ' ' + e.name),
+        labels: sorted.map(e => e.name),
         datasets: [{ data: sorted.map(e => e.amount), backgroundColor: sorted.map(e => e.color + 'cc'), borderColor: sorted.map(e => e.color), borderWidth: 2, borderRadius: 8 }]
       },
       options: {
