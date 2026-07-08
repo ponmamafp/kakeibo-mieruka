@@ -87,6 +87,11 @@ body { background: var(--bg); font-family: 'M PLUS Rounded 1c', 'Hiragino Maru G
 .cat-preview { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
 .cat-preview-chip { font-size:12px; padding:4px 9px; border-radius:14px; background:var(--surface2); border:1px solid var(--border); color:var(--text); }
 .cat-preview-chip.inc { background:var(--green-bg); border-color:#b2dfcb; color:var(--green); }
+/* 記録時の動的演出 */
+@keyframes statPop { 0% { transform:scale(1); } 45% { transform:scale(1.22); } 100% { transform:scale(1); } }
+.stat-value.pop { animation:statPop 0.45s ease; }
+@keyframes noticeIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:none; } }
+#monthRolloverNotice > div, .fixed-banner { animation:noticeIn 0.4s ease; }
 .error { color:var(--red); font-size:12px; margin-top:8px; }
 
 .summary-boxes { display:flex; gap:10px; margin-bottom:18px; }
@@ -268,11 +273,12 @@ canvas { max-height:260px; }
 
 <!-- ============ PAGE: MAIN ============ -->
 <div class="main" id="pageMain">
-  <div style="text-align:center;margin:14px 0 6px;font-size:20px;font-weight:900;color:var(--text);letter-spacing:2px" id="dashMonthLabel">📅 4月の家計</div>
+  <div style="text-align:center;margin:14px 0 6px;font-size:20px;font-weight:900;color:var(--text);letter-spacing:2px" id="dashMonthLabel">📅 今月の家計</div>
   <div id="periodWrap" style="display:none">
     <div class="period-badge">📆 管理開始から <span id="periodDays">0</span> 日目</div>
   </div>
 
+  <div id="monthRolloverNotice"></div>
   <div id="fixedBanner"></div>
 
   <!-- 入力カード -->
@@ -525,7 +531,12 @@ canvas { max-height:260px; }
       <label style="display:block;font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:700">👤 ニックネーム（任意）</label>
       <input type="text" id="nickname" placeholder="例: ぽん" style="width:140px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;box-sizing:border-box">
     </div>
-    <div style="font-size:9px;color:var(--text2);line-height:1.5">ニックネームを入れるとダッシュボードに「○○の○月の家計」と表示されます</div>
+    <div style="font-size:9px;color:var(--text2);line-height:1.5;margin-bottom:12px">ニックネームを入れるとダッシュボードに「○○の○月の家計」と表示されます</div>
+    <div style="margin-bottom:6px">
+      <label style="display:block;font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:700">💰 月の開始日（給料日締め）</label>
+      <select id="monthStartDaySel" onchange="updateMonthStartDay(this.value)" style="width:140px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none"></select>
+    </div>
+    <div style="font-size:9px;color:var(--text2);line-height:1.5">給料日に合わせて「ひと月」の区切りを変えられます。例：25日にすると 6/25〜7/24 を「6月の家計」として集計します（1日＝カレンダー通り）</div>
   </div>
   <div class="card">
     <div class="card-title">⚙️ 勘定科目のカスタマイズ</div>
@@ -896,12 +907,55 @@ function deleteFixedCost(id) {
   renderFixedSettings();
   render();
 }
+// 月が変わった最初の起動時に1回だけ出すお知らせ（「記録消えた！？」の困惑防止）
+function renderMonthRolloverNotice() {
+  const el = document.getElementById('monthRolloverNotice');
+  if (!el) return;
+  const data = load();
+  const ym = currentPeriodKey();
+  if (!data.lastSeenYM) {
+    // 初回利用：黙って記録するだけ
+    data.lastSeenYM = ym;
+    save(data);
+    el.innerHTML = '';
+    return;
+  }
+  if (data.lastSeenYM === ym) { el.innerHTML = ''; return; }
+  // 月が変わった！ 前の月の実績をひとこと添える
+  const prevEntries = (data.entries || []).filter(e => periodKeyOf(e.date) === data.lastSeenYM);
+  const prevExpense = prevEntries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const prevY = data.lastSeenYM.slice(0, 4);
+  const prevRange = periodRangeLabel(data.lastSeenYM);
+  const prevLabel = prevRange || ((prevY !== ym.slice(0, 4) ? prevY + '年' : '') + parseInt(data.lastSeenYM.slice(5), 10) + '月');
+  const nowRange = periodRangeLabel(ym);
+  const nowLabel = nowRange || (parseInt(ym.slice(5), 10) + '月');
+  const prevLine = prevEntries.length > 0
+    ? `${esc(prevLabel)}の支出は <strong>¥${prevExpense.toLocaleString()}</strong> でした。<br>`
+    : '';
+  el.innerHTML = `
+    <div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px">🗓 ${esc(nowLabel)}の家計になりました</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:10px">
+        ${prevLine}引き続き${esc(prevLabel)}分の記録もできます（入力欄の日付を変えるだけ）。<br>
+        1か月ごとの記録は、<strong>📋明細</strong>・<strong>📈分析</strong>タブでいつでも見られます👌
+      </div>
+      <button class="btn-sm" style="background:var(--green)" onclick="dismissMonthRollover()">OK！</button>
+    </div>
+  `;
+}
+function dismissMonthRollover() {
+  const data = load();
+  data.lastSeenYM = currentPeriodKey();
+  save(data);
+  renderMonthRolloverNotice();
+}
+
 function renderFixedBanner() {
   const el = document.getElementById('fixedBanner');
   if (!el) return;
   const data = load();
   ensureFixedDefaults(data);
-  const ym = currentYM();
+  const ym = currentPeriodKey();
   if (data.fixedCosts.length === 0 || data.appliedFixedMonths.includes(ym)) {
     el.innerHTML = '';
     return;
@@ -926,9 +980,9 @@ function renderFixedBanner() {
 function applyFixedCostsNow() {
   const data = load();
   ensureFixedDefaults(data);
-  const ym = currentYM();
+  const ym = currentPeriodKey();
   data.fixedCosts.forEach(fc => {
-    data.entries.push({ id: uid(), date: ym + '-01', name: fc.cat, amount: fc.amount, type: 'expense', fixedCostId: fc.id });
+    data.entries.push({ id: uid(), date: periodStartDate(ym), name: fc.cat, amount: fc.amount, type: 'expense', fixedCostId: fc.id });
   });
   data.appliedFixedMonths.push(ym);
   save(data);
@@ -937,7 +991,7 @@ function applyFixedCostsNow() {
 function dismissFixedBanner() {
   const data = load();
   ensureFixedDefaults(data);
-  const ym = currentYM();
+  const ym = currentPeriodKey();
   if (!data.appliedFixedMonths.includes(ym)) data.appliedFixedMonths.push(ym);
   save(data);
   render();
@@ -958,9 +1012,69 @@ function currentYM() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
+// ===== 給料日締め（月の開始日）対応 =====
+// 「ひと月」を 開始日〜翌月(開始日-1) で区切る。キーは開始月の 'YYYY-MM'。
+function monthStartDay() {
+  const v = parseInt(load().monthStartDay, 10);
+  return (v >= 1 && v <= 28) ? v : 1;
+}
+function periodKeyOf(dateStr) {
+  if (!dateStr || dateStr.length < 10) return '';
+  const sd = monthStartDay();
+  let y = +dateStr.slice(0, 4), m = +dateStr.slice(5, 7);
+  const day = +dateStr.slice(8, 10);
+  if (day < sd) { m--; if (m < 1) { m = 12; y--; } }
+  return y + '-' + String(m).padStart(2, '0');
+}
+function currentPeriodKey() { return periodKeyOf(todayStr()); }
+function prevPeriodKey(key) {
+  let y = +key.slice(0, 4), m = +key.slice(5, 7) - 1;
+  if (m < 1) { m = 12; y--; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+function periodRangeLabel(key) {
+  // 開始日1日なら空。それ以外は「6/25〜7/24」形式
+  const sd = monthStartDay();
+  if (sd === 1) return '';
+  const m = +key.slice(5, 7);
+  let nm = m + 1; if (nm > 12) nm = 1;
+  return m + '/' + sd + '〜' + nm + '/' + (sd - 1);
+}
+function periodStartDate(key) {
+  return key + '-' + String(monthStartDay()).padStart(2, '0');
+}
+function updateMonthStartDay(value) {
+  const data = load();
+  const oldKey = currentPeriodKey(); // 変更前の「今月」キー
+  data.monthStartDay = parseInt(value, 10) || 1;
+  save(data);
+  const newKey = currentPeriodKey(); // 変更後の「今月」キー
+  // 区切り変更で月替わりバナー・固定費バナーが誤発動しないようにガード
+  const d2 = load();
+  d2.lastSeenYM = newKey;
+  if ((d2.appliedFixedMonths || []).includes(oldKey) && !(d2.appliedFixedMonths || []).includes(newKey)) {
+    d2.appliedFixedMonths.push(newKey);
+  }
+  save(d2);
+  render();
+}
+function renderMonthStartDaySel() {
+  const sel = document.getElementById('monthStartDaySel');
+  if (!sel) return;
+  const cur = monthStartDay();
+  sel.innerHTML = '';
+  for (let d = 1; d <= 28; d++) {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d === 1 ? '1日（カレンダー通り）' : d + '日はじまり';
+    if (d === cur) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
 function entriesThisMonth(entries) {
-  const prefix = currentYM();
-  return entries.filter(e => (e.date || '').startsWith(prefix));
+  const key = currentPeriodKey();
+  return entries.filter(e => periodKeyOf(e.date) === key);
 }
 
 function load() {
@@ -1053,6 +1167,7 @@ function renderGoalCatButtons() {
 function renderSettings() {
   renderThemeSettings();
   renderFixedSettings();
+  renderMonthStartDaySel();
   const data = load();
   const exp = EXPENSE_CATS();
   const inc = INCOME_CATS();
@@ -1267,6 +1382,7 @@ function aggregateByCategory(entries) {
 
 function render() {
   const data = load();
+  renderMonthRolloverNotice();
   renderFixedBanner();
   if (!data.startDate) {
     data.startDate = todayStr();
@@ -1275,9 +1391,11 @@ function render() {
   document.getElementById('startDate').value = data.startDate || '';
   document.getElementById('nickname').value  = data.nickname  || '';
   const now = new Date();
-  const dashM = now.getMonth() + 1;
+  const curKey = currentPeriodKey();
+  const dashM = parseInt(curKey.slice(5), 10);
   const nick = data.nickname ? data.nickname + 'の' : '';
-  document.getElementById('dashMonthLabel').textContent = '📅 ' + nick + dashM + '月の家計';
+  const range = periodRangeLabel(curKey);
+  document.getElementById('dashMonthLabel').textContent = '📅 ' + nick + (range ? range + ' の家計' : dashM + '月の家計');
 
   if (data.startDate) {
     const diff = Math.max(0, Math.floor((new Date() - new Date(data.startDate)) / 86400000));
@@ -1445,13 +1563,12 @@ function filterByPeriod(entries, mode) {
     return entries.filter(x => (x.date||'') >= sStr && (x.date||'') <= eStr);
   }
   if (mode === 'this') {
-    const prefix = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-    return entries.filter(e => (e.date || '').startsWith(prefix));
+    const key = currentPeriodKey();
+    return entries.filter(e => periodKeyOf(e.date) === key);
   }
   if (mode === 'last') {
-    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
-    const prefix = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-    return entries.filter(e => (e.date || '').startsWith(prefix));
+    const key = prevPeriodKey(currentPeriodKey());
+    return entries.filter(e => periodKeyOf(e.date) === key);
   }
   if (mode === '3m') {
     const cutoff = new Date(now.getFullYear(), now.getMonth()-2, 1);
@@ -1649,6 +1766,29 @@ function removeEntryById(id) {
   render();
 }
 
+// 記録直後：サマリー金額をカウントアップ＋ポンッと弾ませる
+function parseYen(text) { return parseInt(String(text).replace(/[^0-9-]/g, ''), 10) || 0; }
+function animateStat(id, from, fmt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const to = parseYen(el.textContent);
+  if (from === to) return;
+  const t0 = performance.now(), dur = 550;
+  function step(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(Math.round(from + (to - from) * eased));
+    if (p < 1) requestAnimationFrame(step); else el.textContent = fmt(to);
+  }
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  requestAnimationFrame(step);
+}
+function animateStatsFrom(prev) {
+  animateStat('statIncome',  prev.inc, v => '¥' + v.toLocaleString());
+  animateStat('statExpense', prev.exp, v => '¥' + v.toLocaleString());
+  animateStat('statBalance', prev.bal, v => (v >= 0 ? '+' : '-') + '¥' + Math.abs(v).toLocaleString());
+}
+
 function addEntry() {
   const kw  = document.getElementById('inputKeyword').value.trim();
   const amt = parseInt(document.getElementById('inputAmount').value.replace(/,/g,''), 10);
@@ -1657,13 +1797,18 @@ function addEntry() {
   if (!kw) { err.textContent = 'カテゴリを選択してください'; return; }
   if (isNaN(amt) || amt <= 0) { err.textContent = '金額を正しく入力してください'; return; }
   // 当月以外の日付チェック
-  const inputYM = date.slice(0, 7);
-  const nowYM = currentYM();
-  if (inputYM !== nowYM) {
-    const ymLabel = date.slice(0, 7).replace('-', '年') + '月';
-    if (!confirm(`入力日付が今月ではありません（${ymLabel}）。\nこのまま記録しますか？\n※ 今月のダッシュボード・予算管理には反映されません`)) return;
+  const inputKey = periodKeyOf(date);
+  const nowKey = currentPeriodKey();
+  if (inputKey !== nowKey) {
+    const ymLabel = parseInt(inputKey.slice(0, 4), 10) + '年' + parseInt(inputKey.slice(5), 10) + '月';
+    if (!confirm(`入力日付が今月ではありません（${ymLabel}分になります）。\nこのまま記録しますか？\n※ 今月のダッシュボード・予算管理には反映されません`)) return;
   }
   err.textContent = '';
+  const prevStats = {
+    inc: parseYen(document.getElementById('statIncome').textContent),
+    exp: parseYen(document.getElementById('statExpense').textContent),
+    bal: parseYen(document.getElementById('statBalance').textContent)
+  };
   const data = load();
   data.entries.push({ id: uid(), date, name: kw, amount: amt, type: currentTab });
   save(data);
@@ -1673,6 +1818,7 @@ function addEntry() {
   clearQuickAmtSel();
   document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('chip-selected'));
   render();
+  animateStatsFrom(prevStats);
 }
 
 // 「カテゴリ選択…」の表示欄をタップしたら、選ぶボタン群までスクロールして点滅で誘導
@@ -1999,15 +2145,17 @@ function changeCompareMonth(delta) {
 }
 
 function getEntriesForMonth(entries, year, month) {
-  const prefix = year + '-' + String(month).padStart(2, '0');
-  return entries.filter(e => (e.date || '').startsWith(prefix));
+  const key = year + '-' + String(month).padStart(2, '0');
+  return entries.filter(e => periodKeyOf(e.date) === key);
 }
 
 function renderCompare() {
   const data = load();
   const entries = getAllEntries(data);
 
-  document.getElementById('compareMonthLabel').textContent = compareYear + '年' + compareMonth + '月';
+  const compareKey = compareYear + '-' + String(compareMonth).padStart(2, '0');
+  const compareRange = periodRangeLabel(compareKey);
+  document.getElementById('compareMonthLabel').textContent = compareRange ? compareYear + '年 ' + compareRange : compareYear + '年' + compareMonth + '月';
 
   const cur = getEntriesForMonth(entries, compareYear, compareMonth);
   let prevY = compareYear, prevM = compareMonth - 1;
@@ -2144,7 +2292,7 @@ function renderAnnual() {
 
   document.getElementById('annualYearLabel').textContent = annualYear + '年';
 
-  const yearEntries = entries.filter(e => (e.date || '').startsWith(annualYear + '-'));
+  const yearEntries = entries.filter(e => periodKeyOf(e.date).startsWith(annualYear + '-'));
   const totalIncome  = yearEntries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
   const totalExpense = yearEntries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
   const balance = totalIncome - totalExpense;
