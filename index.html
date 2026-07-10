@@ -32,9 +32,9 @@ body { background: var(--bg); font-family: 'M PLUS Rounded 1c', 'Hiragino Maru G
 .header h1 span { font-family:'Noto Sans JP',sans-serif; font-size:12px; display:block; color:rgba(255,255,255,0.75); font-weight:400; margin-top:4px; letter-spacing:2px; }
 
 .bottom-nav-wrap { position:fixed; bottom:0; left:0; right:0; z-index:100; box-shadow:0 -2px 12px rgba(0,0,0,0.08); }
-.page-tabs { display:flex; background:var(--surface); border-bottom:1.5px solid var(--border); }
-.page-tab { flex:1; padding:14px 10px; font-size:13px; font-weight:700; color:var(--text2); background:none; border:none; cursor:pointer; font-family:inherit; border-bottom:3px solid transparent; transition:all 0.15s; }
-.page-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:var(--surface2); }
+.page-tabs { display:flex; gap:5px; padding:6px 6px; background:var(--surface); border-bottom:1.5px solid var(--border); }
+.page-tab { flex:1; padding:12px 6px; font-size:15px; font-weight:800; color:var(--text); background:var(--surface2); border:none; border-radius:12px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.page-tab.active { color:#fff; background:var(--accent); box-shadow:0 2px 8px rgba(0,0,0,0.18); transform:translateY(-1px); }
 
 
 .stats-bar { display:flex; background:var(--surface); border-bottom:1px solid var(--border); overflow-x:auto; }
@@ -180,7 +180,9 @@ canvas { max-height:260px; }
 .review-card-amount { font-size:15px; font-weight:900; color:var(--red); }
 .review-card-date { font-size:11px; color:var(--text2); margin-bottom:8px; }
 .review-tags { display:flex; gap:6px; margin-bottom:10px; }
-.review-tag { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; border:1.5px solid var(--border); background:var(--surface); color:var(--text2); transition:all 0.15s; }
+.review-tag { padding:6px 9px; border-radius:20px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; border:1.5px solid var(--border); background:var(--surface); color:var(--text2); transition:all 0.15s; white-space:nowrap; }
+.review-tags { flex-wrap:nowrap; }
+.review-tags .review-tag:not([style*="dashed"]) { flex:1 1 0; min-width:0; }
 .review-tag.sel-waste { background:var(--red-bg); border-color:var(--red); color:var(--red); }
 .review-tag.sel-review { background:#fef9e7; border-color:#d4a017; color:#b8860b; }
 .review-tag.sel-special { background:#f0e6ff; border-color:#9b72cf; color:#7b5ea7; }
@@ -261,7 +263,8 @@ canvas { max-height:260px; }
 
 
 
-.page-tab { font-size:12px; }
+.page-tab { font-size:14px; padding:12px 4px; white-space:nowrap; }
+@media (max-width:360px){ .page-tab { font-size:12px; padding:11px 2px; } .page-tabs { gap:3px; padding:5px 4px; } }
 </style>
 </head>
 <body>
@@ -1791,7 +1794,7 @@ function animateStatsFrom(prev) {
 
 function addEntry() {
   const kw  = document.getElementById('inputKeyword').value.trim();
-  const amt = parseInt(document.getElementById('inputAmount').value.replace(/,/g,''), 10);
+  const amt = getAmtValue();
   const date = document.getElementById('inputDate').value || todayStr();
   const err = document.getElementById('errMsg');
   if (!kw) { err.textContent = 'カテゴリを選択してください'; return; }
@@ -1815,6 +1818,7 @@ function addEntry() {
   document.getElementById('inputKeyword').value = '';
   document.getElementById('inputAmount').value  = '';
   amtRawBase = '';
+  showAmtHint();
   clearQuickAmtSel();
   document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('chip-selected'));
   render();
@@ -1849,6 +1853,9 @@ function selectGoalCat(btn) {
 let amtRawBase = '';
 function clearQuickAmtSel() {
   document.querySelectorAll('.quick-amt-btn').forEach(b => b.classList.remove('sel'));
+}
+function getAmtValue() {
+  return parseInt((document.getElementById('inputAmount').value || '').replace(/,/g, ''), 10) || 0;
 }
 function onAmtInput() {
   const el = document.getElementById('inputAmount');
