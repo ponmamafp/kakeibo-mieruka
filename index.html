@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>家計見える化ノート</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e07b4f">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -205,7 +209,10 @@ canvas { max-height:260px; }
   padding:6px 6px; border:1px solid var(--border); border-radius:7px; font-size:12px; font-family:inherit;
   background:#fff; color:var(--text); outline:none; box-sizing:border-box; min-width:0;
 }
-.hist-card .hist-edit-row input[type="date"] { flex:1 1 auto; font-size:11px; }
+.hist-card .hist-date { position:relative; display:inline-flex; }
+.hist-card .hist-date-txt { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:700; color:var(--text); background:#fff; white-space:nowrap; }
+.hist-card .hist-date-txt::before { content:'📅'; font-size:11px; }
+.hist-card .hist-date input[type="date"] { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; border:0; opacity:0; cursor:pointer; }
 .hist-card .hist-edit-row2 .he-type { flex:0 0 auto; width:62px; font-size:11px; }
 .hist-card .hist-edit-row2 .he-cat { flex:1 1 auto; }
 .hist-card .hist-edit-row2 .he-amt { flex:0 0 86px; text-align:right; }
@@ -1555,6 +1562,18 @@ function filterByPeriod(entries, mode) {
   return entries;
 }
 
+// 明細カード用：日付を短く表示（今年は「7/13(日)」、他の年は「24/7/13(土)」）
+function shortDate(iso) {
+  if (!iso) return '日付なし';
+  const p = iso.split('-').map(Number);
+  if (p.length < 3 || !p[0]) return iso;
+  const [y, m, d] = p;
+  const wd = ['日','月','火','水','木','金','土'][new Date(y, m-1, d).getDay()];
+  const now = new Date();
+  const yr = y === now.getFullYear() ? '' : String(y).slice(2) + '/';
+  return `${yr}${m}/${d}(${wd})`;
+}
+
 function renderHistory() {
   const data = load();
   const listEl = document.getElementById('histList');
@@ -1628,7 +1647,10 @@ function renderHistory() {
 
     let html = `
       <div class="hist-edit-row">
-        <input type="date" value="${e.date || ''}" onchange="updateEntry('${e.id}','date',this.value)">
+        <div class="hist-date">
+          <span class="hist-date-txt">${shortDate(e.date)}</span>
+          <input type="date" value="${e.date || ''}" onchange="updateEntry('${e.id}','date',this.value)">
+        </div>
         <button class="btn-del" style="margin-left:auto" onclick="removeEntryById('${e.id}')">×</button>
       </div>
       <div class="hist-edit-row2">
