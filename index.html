@@ -198,6 +198,20 @@ canvas { max-height:260px; }
 .review-summary-box { flex:1; min-width:80px; padding:10px; border-radius:10px; text-align:center; border:1.5px solid var(--border); }
 .review-summary-box .label { font-size:10px; color:var(--text2); margin-bottom:3px; }
 .review-summary-box .val { font-size:14px; font-weight:900; }
+/* 統合明細カード（編集＋振り返り） */
+.hist-card .hist-edit-row { display:flex; align-items:center; gap:6px; margin-bottom:7px; }
+.hist-card .hist-edit-row2 { display:flex; align-items:center; gap:6px; }
+.hist-card .hist-edit-row input, .hist-card .hist-edit-row2 input, .hist-card .hist-edit-row2 select {
+  padding:6px 6px; border:1px solid var(--border); border-radius:7px; font-size:12px; font-family:inherit;
+  background:#fff; color:var(--text); outline:none; box-sizing:border-box; min-width:0;
+}
+.hist-card .hist-edit-row input[type="date"] { flex:1 1 auto; font-size:11px; }
+.hist-card .hist-edit-row2 .he-type { flex:0 0 auto; width:62px; font-size:11px; }
+.hist-card .hist-edit-row2 .he-cat { flex:1 1 auto; }
+.hist-card .hist-edit-row2 .he-amt { flex:0 0 86px; text-align:right; }
+.hist-card .hist-edit-row input:focus, .hist-card .hist-edit-row2 input:focus, .hist-card .hist-edit-row2 select:focus { border-color:var(--accent); background:#fff; }
+.hist-review-block { border-top:1px dashed var(--border); padding-top:9px; margin-top:10px; }
+.hist-review-q { font-size:10px; color:var(--text2); font-weight:700; margin-bottom:5px; }
 .badge-type { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; }
 .badge-type.income  { background:var(--green-bg); color:var(--green); }
 .badge-type.expense { background:var(--red-bg); color:var(--red); }
@@ -361,68 +375,39 @@ canvas { max-height:260px; }
 
 <!-- ============ PAGE: HISTORY ============ -->
 <div class="main" id="pageHistory" style="display:none">
-  <!-- Sub tabs -->
-  <div class="hist-subtabs">
-    <button class="hist-subtab active" id="histSubEdit" onclick="switchHistSub('edit')">📝 編集</button>
-    <button class="hist-subtab" id="histSubReview" onclick="switchHistSub('review')">📋 振り返り</button>
-  </div>
-
-  <!-- Edit mode -->
-  <div id="histEditSection">
-    <div class="card">
-      <div class="card-title">📝 記録履歴（日付・カテゴリ・金額を編集）</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-        行をタップして日付・カテゴリ・金額を直接編集できます。変更は自動保存されます。<br>
-        不要な記録は × ボタンで削除できます。
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <label style="font-size:11px;color:var(--text2);font-weight:700">表示期間</label>
-        <select id="histPeriod" onchange="renderHistory()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff">
-          <option value="thisWeek">今週</option>
-          <option value="lastWeek">先週</option>
-          <option value="this" selected>今月</option>
-          <option value="last">先月</option>
-          <option value="3m">過去3ヶ月</option>
-          <option value="all">全期間</option>
-        </select>
-        <span id="histCount" style="font-size:11px;color:var(--text2)"></span>
-        <button class="btn-export" onclick="exportPeriodCSV()" style="margin-left:auto;padding:6px 12px;font-size:12px">📥 この期間をCSV保存</button>
-      </div>
-      <div class="hist-wrap">
-        <table class="hist-table" id="histTable">
-          <thead>
-            <tr>
-              <th>日付</th>
-              <th class="hist-gap"></th>
-              <th>種別</th>
-              <th>カテゴリ</th>
-              <th>金額</th>
-              <th style="width:28px"></th>
-            </tr>
-          </thead>
-          <tbody id="histTbody"></tbody>
-        </table>
-        <div id="histEmpty" class="hist-empty" style="display:none">まだ記録がありません。<br>ダッシュボードから追加してください。</div>
-      </div>
+  <div class="card" style="padding:14px">
+    <div class="card-title">📋 明細＆振り返り</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      記録の<strong>編集</strong>（日付・カテゴリ・金額）と、<strong>振り返り</strong>が1枚のカードでできます。変更は自動保存。不要な記録は × で削除できます。
+    </div>
+    <div class="review-legend" style="margin-bottom:12px">
+      <div class="review-legend-item" style="width:100%;font-weight:700;color:var(--text)">この出費どうだった？（各カードで1つ選ぶ）</div>
+      <div class="review-legend-item"><span>😵 ムダ</span> → 買わなきゃよかった</div>
+      <div class="review-legend-item"><span>🔄 見直し</span> → もっと安くできた</div>
+      <div class="review-legend-item"><span>😊 満足</span> → 気持ちよく使えた</div>
+      <div class="review-legend-item" style="width:100%;border-top:1px dashed var(--border);margin-top:5px;padding-top:6px"><span>⭐ 特別費</span> → 毎月じゃない大きめの出費（<strong>別枠</strong>・上のどれとでも一緒に付けてOK）</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--text2);font-weight:700">表示期間</label>
+      <select id="histPeriod" onchange="renderHistory()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff">
+        <option value="thisWeek">今週</option>
+        <option value="lastWeek">先週</option>
+        <option value="this" selected>今月</option>
+        <option value="last">先月</option>
+        <option value="3m">過去3ヶ月</option>
+        <option value="all">全期間</option>
+      </select>
+      <span id="histCount" style="font-size:11px;color:var(--text2)"></span>
+      <button class="btn-export" onclick="exportPeriodCSV()" style="margin-left:auto;padding:6px 12px;font-size:12px">📥 この期間をCSV保存</button>
     </div>
   </div>
 
-  <!-- Review mode -->
-  <div id="histReviewSection" style="display:none">
-    <div class="card" style="padding:14px">
-      <div class="card-title">🔍 振り返り（支出チェック）</div>
-      <div class="review-legend">
-        <div class="review-legend-item" style="width:100%;font-weight:700;color:var(--text)">この出費どうだった？（下から1つ選ぶ）</div>
-        <div class="review-legend-item"><span>😵 ムダだった</span> → 買わなきゃよかった・衝動買い</div>
-        <div class="review-legend-item"><span>🔄 見直せる</span> → もっと安くできた・見直しできそう</div>
-        <div class="review-legend-item"><span>😊 満足</span> → 気持ちよく使えた・後悔なし</div>
-        <div class="review-legend-item" style="width:100%;border-top:1px dashed var(--border);margin-top:5px;padding-top:6px"><span>⭐ 特別費</span> → 毎月じゃない大きめの出費（<strong>別枠</strong>・上のどれとでも一緒に付けてOK）</div>
-      </div>
-      <div class="review-summary" id="reviewSummary"></div>
-      <div id="reviewList"></div>
-      <div id="reviewEmpty" class="hist-empty" style="display:none">支出記録がありません。</div>
-    </div>
-  </div>
+  <!-- 振り返りサマリー（この期間の支出タグ集計） -->
+  <div class="review-summary" id="reviewSummary" style="display:none"></div>
+
+  <!-- 統合リスト（明細＋振り返りを1枚のカードに） -->
+  <div id="histList"></div>
+  <div id="histEmpty" class="hist-empty" style="display:none">まだ記録がありません。<br>ダッシュボードから追加してください。</div>
 </div>
 
 <!-- ============ PAGE: ANALYSIS ============ -->
@@ -622,7 +607,10 @@ canvas { max-height:260px; }
       ⚠️ <strong>大事なお願い</strong><br>
       ホーム画面に追加したアプリを<strong>削除すると、記録データも一緒に消えます</strong>（スマホの仕様です）。更新したいときは「アプリを削除」ではなく、<strong>閉じて開き直す</strong>だけでOK。念のため、ときどき下のボタンでバックアップを取っておくと安心です。
     </div>
-    <button class="btn-export" onclick="exportFullCSV()" style="background:var(--green);width:100%;margin-bottom:16px">💾 全履歴をバックアップ（CSV保存）</button>
+    <button class="btn-export" onclick="exportFullCSV()" style="background:var(--green);width:100%;margin-bottom:8px">💾 全履歴をバックアップ（CSV保存）</button>
+    <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:16px;padding:9px 12px;background:var(--surface);border:1px dashed var(--border);border-radius:10px">
+      📅 <strong>今月分だけ・特定の月だけ</strong>を書き出したいときは、<strong>「📋 明細」タブ</strong>で表示期間（今月／先月など）を選んで、<strong>「📥 この期間をCSV保存」</strong>からどうぞ。
+    </div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
       記録をすべて削除して、最初からやり直すこともできます（この操作は取り消せません）。
     </div>
@@ -1133,7 +1121,7 @@ function switchPage(p) {
   document.getElementById('pageAnalysis').style.display  = p==='analysis' ? 'block' : 'none';
   document.getElementById('pageSettings').style.display  = p==='settings' ? 'block' : 'none';
   if (p === 'main') render();
-  if (p === 'history') { if (histSubMode === 'review') renderReview(); else renderHistory(); }
+  if (p === 'history') renderHistory();
   if (p === 'settings') renderSettings();
   if (p === 'analysis') {
     if (analysisSubMode === 'annual') renderAnnual();
@@ -1523,21 +1511,7 @@ function render() {
 
   renderChips();
   renderGoalCatButtons();
-  if (currentPage === 'history') {
-    if (histSubMode === 'review') renderReview();
-    else renderHistory();
-  }
-}
-
-let histSubMode = 'edit';
-function switchHistSub(mode) {
-  histSubMode = mode;
-  document.getElementById('histSubEdit').classList.toggle('active', mode === 'edit');
-  document.getElementById('histSubReview').classList.toggle('active', mode === 'review');
-  document.getElementById('histEditSection').style.display = mode === 'edit' ? 'block' : 'none';
-  document.getElementById('histReviewSection').style.display = mode === 'review' ? 'block' : 'none';
-  if (mode === 'edit') renderHistory();
-  if (mode === 'review') renderReview();
+  if (currentPage === 'history') renderHistory();
 }
 
 function fmtDate(d) {
@@ -1583,133 +1557,111 @@ function filterByPeriod(entries, mode) {
 
 function renderHistory() {
   const data = load();
-  const tbody = document.getElementById('histTbody');
+  const listEl = document.getElementById('histList');
   const empty = document.getElementById('histEmpty');
   const countEl = document.getElementById('histCount');
-  tbody.innerHTML = '';
+  const summary = document.getElementById('reviewSummary');
+  listEl.innerHTML = '';
   const periodSel = document.getElementById('histPeriod');
   const mode = periodSel ? periodSel.value : 'this';
   const all = data.entries || [];
   const filtered = filterByPeriod(all, mode);
   if (countEl) countEl.textContent = filtered.length + '件 / 全' + all.length + '件';
+
+  // 振り返りサマリー（この期間の支出タグ集計）
+  const exp = filtered.filter(e => e.type === 'expense');
+  if (exp.length > 0) {
+    const wasteAmt = exp.filter(e => e.tag === 'waste').reduce((s, e) => s + e.amount, 0);
+    const reviewAmt = exp.filter(e => e.tag === 'review').reduce((s, e) => s + e.amount, 0);
+    const satisfiedAmt = exp.filter(e => e.tag === 'satisfied').reduce((s, e) => s + e.amount, 0);
+    const specialAmt = exp.filter(e => e.special).reduce((s, e) => s + e.amount, 0);
+    summary.style.display = 'flex';
+    summary.innerHTML = `
+      <div class="review-summary-box" style="background:var(--red-bg)">
+        <div class="label">😵 ムダ</div>
+        <div class="val" style="color:var(--red)">¥${wasteAmt.toLocaleString()}</div>
+      </div>
+      <div class="review-summary-box" style="background:#fef9e7">
+        <div class="label">🔄 見直し</div>
+        <div class="val" style="color:#b8860b">¥${reviewAmt.toLocaleString()}</div>
+      </div>
+      <div class="review-summary-box" style="background:var(--green-bg)">
+        <div class="label">😊 満足</div>
+        <div class="val" style="color:var(--green)">¥${satisfiedAmt.toLocaleString()}</div>
+      </div>
+      <div class="review-summary-box" style="background:#f0e6ff">
+        <div class="label">⭐ 特別費</div>
+        <div class="val" style="color:#7b5ea7">¥${specialAmt.toLocaleString()}</div>
+      </div>
+    `;
+  } else {
+    summary.style.display = 'none';
+    summary.innerHTML = '';
+  }
+
   if (filtered.length === 0) {
     empty.style.display = 'block';
     empty.innerHTML = all.length === 0
       ? 'まだ記録がありません。<br>ダッシュボードから追加してください。'
       : 'この期間に記録はありません。<br>「表示期間」を変えて確認してください。';
-    document.getElementById('histTable').style.display = 'none';
     return;
   }
   empty.style.display = 'none';
-  document.getElementById('histTable').style.display = 'table';
 
-  const sorted = [...filtered].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  // 記録した順（配列の追加順）を保ったまま、新しく入れたものを上に。
+  const sorted = [...filtered].reverse();
   sorted.forEach(e => {
-    const cats = e.type === 'income' ? INCOME_CATS() : EXPENSE_CATS();
+    const isExpense = e.type !== 'income';
+    const cats = isExpense ? EXPENSE_CATS() : INCOME_CATS();
     const opts = Object.keys(cats).map(c =>
       `<option value="${esc(c)}" ${c===e.name?'selected':''}>${esc(cats[c].icon)} ${esc(c)}</option>`
     ).join('');
-    const tr = document.createElement('tr');
-    if (e.tag === 'waste') tr.style.background = 'var(--red-bg)';
-    else if (e.tag === 'review') tr.style.background = '#fef9e7';
-    tr.innerHTML = `
-      <td><input type="date" value="${e.date || ''}" onchange="updateEntry('${e.id}','date',this.value)"></td>
-      <td class="hist-gap"></td>
-      <td>
-        <select onchange="updateEntry('${e.id}','type',this.value)">
-          <option value="expense" ${e.type==='expense'?'selected':''}>支出</option>
-          <option value="income"  ${e.type==='income'?'selected':''}>収入</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="updateEntry('${e.id}','name',this.value)">${opts}</select>
-      </td>
-      <td><input type="number" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)"></td>
-      <td><button class="btn-del" onclick="removeEntryById('${e.id}')">×</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderReview() {
-  const data = load();
-  const list = document.getElementById('reviewList');
-  const empty = document.getElementById('reviewEmpty');
-  const summary = document.getElementById('reviewSummary');
-  list.innerHTML = '';
-
-  const expenses = (data.entries || []).filter(e => e.type === 'expense')
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-  if (expenses.length === 0) {
-    empty.style.display = 'block';
-    list.style.display = 'none';
-    summary.innerHTML = '';
-    return;
-  }
-  empty.style.display = 'none';
-  list.style.display = 'block';
-
-  // Summary counts
-  const wasteAmt = expenses.filter(e => e.tag === 'waste').reduce((s, e) => s + e.amount, 0);
-  const reviewAmt = expenses.filter(e => e.tag === 'review').reduce((s, e) => s + e.amount, 0);
-  const satisfiedAmt = expenses.filter(e => e.tag === 'satisfied').reduce((s, e) => s + e.amount, 0);
-  const specialAmt = expenses.filter(e => e.special).reduce((s, e) => s + e.amount, 0);
-  const unchk = expenses.filter(e => !e.tag).length;
-  const wasteCnt = expenses.filter(e => e.tag === 'waste').length;
-  const reviewCnt = expenses.filter(e => e.tag === 'review').length;
-  const satisfiedCnt = expenses.filter(e => e.tag === 'satisfied').length;
-  const taggedCnt = wasteCnt + reviewCnt + satisfiedCnt;
-  const satisfactionScore = taggedCnt > 0 ? Math.round((satisfiedCnt / taggedCnt) * 100) : null;
-  summary.innerHTML = `
-    <div class="review-summary-box" style="background:var(--red-bg)">
-      <div class="label">😵 ムダ</div>
-      <div class="val" style="color:var(--red)">¥${wasteAmt.toLocaleString()}</div>
-    </div>
-    <div class="review-summary-box" style="background:#fef9e7">
-      <div class="label">🔄 見直し</div>
-      <div class="val" style="color:#b8860b">¥${reviewAmt.toLocaleString()}</div>
-    </div>
-    <div class="review-summary-box" style="background:var(--green-bg)">
-      <div class="label">😊 満足</div>
-      <div class="val" style="color:var(--green)">¥${satisfiedAmt.toLocaleString()}</div>
-    </div>
-    <div class="review-summary-box" style="background:#f0e6ff">
-      <div class="label">⭐ 特別費</div>
-      <div class="val" style="color:#7b5ea7">¥${specialAmt.toLocaleString()}</div>
-    </div>
-  `;
-
-  expenses.forEach(e => {
-    const info = catInfo(e.name, 'expense');
     const tag = e.tag || '';
     const isSpecial = e.special || false;
-    let cardClass = 'review-card';
-    if (tag) cardClass += ' tag-' + tag;
-    if (isSpecial && !tag) cardClass += ' tag-special';
+    let cardClass = 'review-card hist-card';
+    if (isExpense) {
+      if (tag) cardClass += ' tag-' + tag;
+      else if (isSpecial) cardClass += ' tag-special';
+    }
     const card = document.createElement('div');
     card.className = cardClass;
-    card.innerHTML = `
-      <div class="review-card-top">
-        <div class="review-card-cat">${esc(info.icon)} ${esc(e.name)}</div>
-        <div class="review-card-amount">¥${e.amount.toLocaleString()}</div>
+
+    let html = `
+      <div class="hist-edit-row">
+        <input type="date" value="${e.date || ''}" onchange="updateEntry('${e.id}','date',this.value)">
+        <button class="btn-del" style="margin-left:auto" onclick="removeEntryById('${e.id}')">×</button>
       </div>
-      <div class="review-card-date">${e.date || ''}</div>
-      <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:5px">この出費どうだった？（1つ選ぶ）</div>
-      <div class="review-tags" style="margin-bottom:8px">
-        <button class="review-tag ${tag==='waste'?'sel-waste':''}" onclick="setTag('${e.id}','waste')">😵 ムダ</button>
-        <button class="review-tag ${tag==='review'?'sel-review':''}" onclick="setTag('${e.id}','review')">🔄 見直し</button>
-        <button class="review-tag ${tag==='satisfied'?'sel-ok':''}" onclick="setTag('${e.id}','satisfied')">😊 満足</button>
-      </div>
-      <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:5px">別枠の印（上と一緒に付けてOK）</div>
-      <div class="review-tags">
-        <button class="review-tag ${isSpecial?'sel-special':''}" onclick="toggleSpecial('${e.id}')" style="border-style:dashed">⭐ 特別費</button>
-      </div>
-      <input class="review-memo" type="text" value="${esc(e.memo)}" placeholder="メモを残す…" onchange="updateMemo('${e.id}',this.value)">
-    `;
-    list.appendChild(card);
+      <div class="hist-edit-row2">
+        <select class="he-type" onchange="updateEntry('${e.id}','type',this.value)">
+          <option value="expense" ${isExpense?'selected':''}>支出</option>
+          <option value="income"  ${!isExpense?'selected':''}>収入</option>
+        </select>
+        <select class="he-cat" onchange="updateEntry('${e.id}','name',this.value)">${opts}</select>
+        <input class="he-amt" type="number" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)">
+      </div>`;
+
+    if (isExpense) {
+      html += `
+        <div class="hist-review-block">
+          <div class="hist-review-q">この出費どうだった？（1つ選ぶ）</div>
+          <div class="review-tags" style="margin-bottom:6px">
+            <button class="review-tag ${tag==='waste'?'sel-waste':''}" onclick="setTag('${e.id}','waste')">😵 ムダ</button>
+            <button class="review-tag ${tag==='review'?'sel-review':''}" onclick="setTag('${e.id}','review')">🔄 見直し</button>
+            <button class="review-tag ${tag==='satisfied'?'sel-ok':''}" onclick="setTag('${e.id}','satisfied')">😊 満足</button>
+          </div>
+          <div class="review-tags" style="margin-bottom:8px">
+            <button class="review-tag ${isSpecial?'sel-special':''}" onclick="toggleSpecial('${e.id}')" style="border-style:dashed">⭐ 特別費</button>
+          </div>
+          <input class="review-memo" type="text" value="${esc(e.memo)}" placeholder="メモを残す…" onchange="updateMemo('${e.id}',this.value)">
+        </div>`;
+    }
+    card.innerHTML = html;
+    listEl.appendChild(card);
   });
 }
+
+// 統合後は renderHistory が明細＋振り返りを1画面で描画。旧呼び出し互換のためのエイリアス。
+function renderReview() { renderHistory(); }
 
 function setTag(id, tag) {
   const data = load();
