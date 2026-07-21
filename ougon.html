@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>家計の黄金比率チェック｜FPぽん</title>
+<style>
+  :root{
+    --paper:#F4EDE1;
+    --panel:#EFE6D5;
+    --card:#F8F2E7;
+    --ink:#3D3427;
+    --ink-soft:#6B5844;
+    --ink-faint:#8B7B65;
+    --line:#DCCFB8;
+    --line-soft:#E4DAC7;
+    --terra:#B5734F;
+    --terra-deep:#9A5C3B;
+    --serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Shippori Mincho",serif;
+    --gothic:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",sans-serif;
+    --num:"Helvetica Neue",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--gothic);-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:0 20px 60px}
+
+  header{text-align:center;padding:52px 0 34px}
+  .eyebrow{
+    font-family:var(--serif);font-size:.62rem;letter-spacing:.4em;
+    text-transform:uppercase;color:var(--terra);margin:0 0 16px;padding-left:.4em;
+  }
+  .star{color:var(--terra);font-size:.9rem;margin:0 0 14px}
+  h1{
+    font-family:var(--serif);font-weight:600;
+    font-size:clamp(1.45rem,5.6vw,1.9rem);
+    line-height:1.75;letter-spacing:.02em;margin:0 0 16px;text-wrap:balance;
+  }
+  .lede{
+    font-family:var(--serif);font-size:.88rem;line-height:2.1;
+    color:var(--ink-soft);margin:0 auto;max-width:24em;text-wrap:balance;
+  }
+
+  .box{
+    border:1px solid var(--line);background:var(--card);
+    padding:24px 22px;margin:0 0 18px;
+  }
+  .box .label{
+    font-family:var(--serif);font-size:.72rem;letter-spacing:.24em;
+    color:var(--terra);margin:0 0 14px;
+  }
+
+  .types{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .types button{
+    padding:12px 4px;border:1px solid var(--line);background:transparent;
+    font-family:var(--serif);font-size:.86rem;letter-spacing:.06em;color:var(--ink-soft);
+    cursor:pointer;border-radius:0;
+  }
+  .types button.on{background:var(--terra);border-color:var(--terra);color:#FFF7EE}
+  .types button:focus-visible{outline:2px solid var(--terra-deep);outline-offset:2px}
+
+  .income-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .income-row input{
+    flex:1;min-width:0;padding:13px 14px;text-align:right;
+    border:1px solid var(--line);background:#FFFDF9;
+    font-family:var(--num);font-size:1.25rem;letter-spacing:.04em;
+    font-variant-numeric:tabular-nums;color:var(--ink);border-radius:0;outline:none;
+  }
+  .income-row input:focus{border-color:var(--terra)}
+  .income-row .unit{font-family:var(--serif);font-size:.95rem;color:var(--ink-soft);white-space:nowrap}
+  .hint{font-size:.7rem;color:var(--ink-faint);margin:10px 0 0;letter-spacing:.04em}
+
+  #result{display:none}
+  #result.show{display:block}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .kpi .t{font-family:var(--serif);font-size:.8rem;color:var(--ink-soft);margin:0 0 7px}
+  .kpi .v{
+    font-family:var(--serif);font-weight:600;font-size:1.18rem;
+    font-variant-numeric:tabular-nums;letter-spacing:.01em;margin:0;
+  }
+  .kpi .s{font-size:.68rem;color:var(--ink-faint);margin:5px 0 0}
+
+  .free{
+    background:var(--terra);border:1px solid var(--terra-deep);
+    text-align:center;padding:28px 22px;
+  }
+  .free .t{font-family:var(--serif);font-size:.82rem;letter-spacing:.2em;color:#F1D9C6;margin:0 0 12px}
+  .free .v{
+    font-family:var(--serif);font-weight:600;color:#FFF7EE;
+    font-size:clamp(1.9rem,8vw,2.6rem);letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;margin:0;line-height:1.2;
+  }
+  .free .s{font-family:var(--serif);font-size:.8rem;color:#F5E2D2;line-height:1.95;margin:14px 0 0}
+  .free .s b{color:#FFF7EE;font-variant-numeric:tabular-nums}
+
+  .bars .brow{margin:0 0 13px}
+  .bars .brow:last-child{margin-bottom:0}
+  .bars .cap{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:.8rem;margin:0 0 5px;
+  }
+  .bars .cap .n{font-family:var(--serif);color:var(--ink)}
+  .bars .cap .a{font-variant-numeric:tabular-nums;color:var(--ink-soft);font-size:.78rem}
+  .bars .track{height:4px;background:var(--line-soft);position:relative}
+  .bars .fill{position:absolute;left:0;top:0;height:4px;background:var(--terra);opacity:.75}
+
+  .note{
+    font-size:.7rem;line-height:1.95;color:var(--ink-faint);
+    margin:20px 0 0;letter-spacing:.02em;
+  }
+
+  .next{
+    border:1px solid var(--line);background:var(--panel);
+    text-align:center;padding:30px 22px;margin:34px 0 0;
+  }
+  .next .t{
+    font-family:var(--serif);font-size:1.02rem;line-height:2;
+    margin:0 0 16px;text-wrap:balance;
+  }
+  .next a{
+    display:inline-block;padding:13px 34px;background:var(--terra);color:#FFF7EE;
+    text-decoration:none;font-family:var(--serif);font-size:.9rem;letter-spacing:.16em;
+  }
+  .next a:hover{background:var(--terra-deep)}
+  .next .s{font-size:.7rem;color:var(--ink-faint);margin:12px 0 0}
+
+  footer{
+    text-align:center;padding:40px 20px 8px;
+    font-family:var(--serif);font-size:.66rem;letter-spacing:.14em;
+    color:var(--ink-faint);line-height:2;
+  }
+  footer .sep{color:var(--terra);padding:0 .5em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">FP Pon — Gift</p>
+    <p class="star">✦</p>
+    <h1>家計の黄金比率チェック</h1>
+    <p class="lede">手取りを入れるだけ。FP監修の黄金比から、あなたの家計の「ちょうどいい配分」と「使っていい額」の目安がわかります。</p>
+  </header>
+
+  <div class="box">
+    <p class="label">世帯タイプ</p>
+    <div class="types" id="types">
+      <button type="button" data-t="family" class="on">子育て世帯</button>
+      <button type="button" data-t="couple">夫婦ふたり</button>
+      <button type="button" data-t="single">おひとり</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <p class="label">手取り月収（ボーナスは含めない）</p>
+    <div class="income-row">
+      <input id="inc" inputmode="numeric" placeholder="300,000" aria-label="手取り月収（円）">
+      <span class="unit">円</span>
+    </div>
+    <p class="hint">※ 夫婦なら、ふたり分の合計でOK。</p>
+  </div>
+
+  <div id="result">
+    <div class="box">
+      <div class="row2">
+        <div class="kpi">
+          <p class="t">先取り貯蓄のめやす</p>
+          <p class="v" id="saveV">—</p>
+          <p class="s" id="saveS">手取りの—%</p>
+        </div>
+        <div class="kpi">
+          <p class="t">固定費のめやす</p>
+          <p class="v" id="fixV">—</p>
+          <p class="s">手取りの40%以内に</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="free">
+      <p class="t">✦ あなたが毎月、使っていいお金 ✦</p>
+      <p class="v" id="freeV">—</p>
+      <p class="s">うち、交際や楽しみにあてていい「おたのしみ枠」は <b id="funV">—</b>。<br>ネイルも、家族のお出かけも、ここから気にせずどうぞ。</p>
+    </div>
+
+    <div class="box" style="margin-top:18px">
+      <p class="label">内訳のめやす</p>
+      <div class="bars" id="bars"></div>
+      <p class="note">※ 黄金比は総務省・家計調査などをもとにした「目安のものさし」です。地域・家族構成・働き方で適正額は変わるので、ぴったり合わせる必要はありません。「食費はもっと欲しい」など、わが家に合わせて動かしてOK。</p>
+    </div>
+
+    <div class="next">
+      <p class="t">この“ものさし”と、<br>わが家の実態、どれくらい違う？</p>
+      <a href="https://note.com/ponmama_fp/n/nef2a1e7b6c5e" target="_blank" rel="noopener">家計見える化ツールでくらべる</a>
+      <p class="s">まずは1か月。あなたのお金周りを整理しましょう。</p>
+    </div>
+  </div>
+
+  <footer>
+    FPぽん<span class="sep">✦</span>お金を気にせず、自分の理想の選択ができる
+  </footer>
+</div>
+
+<script>
+(function(){
+  // 黄金比データ（FP監修2026-06／見える化_第1章と同じ数字）
+  var DATA={
+    family:{save:[15,19],fun:["交際・娯楽","お小遣い"],
+      variable:[["食費",15],["日用品・医療",3],["教育費",5],["被服費",3],["交通費",3],["交際・娯楽",5],["お小遣い",8]]},
+    couple:{save:[20,23],fun:["趣味・娯楽","夫婦のお小遣い"],
+      variable:[["食費",15],["日用品・医療",3],["被服・美容",3],["交際費",4],["趣味・娯楽",5],["夫婦のお小遣い",8]]},
+    single:{save:[15,22],fun:["趣味・娯楽","交際費"],
+      variable:[["食費",16],["日用品・医療",3],["被服・美容",4],["交際費",5],["趣味・娯楽",6],["自己投資",4]]}
+  };
+  var FIXED=40;
+  var type="family";
+
+  var inc=document.getElementById('inc');
+  var result=document.getElementById('result');
+  function yen(n){return "¥"+Math.round(n).toLocaleString("ja-JP");}
+  function num(s){return parseInt((s||"").toString().replace(/[^0-9]/g,""),10)||0;}
+
+  document.getElementById('types').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    type=b.dataset.t;
+    this.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    calc();
+  });
+
+  inc.addEventListener('input',function(){
+    var v=num(inc.value);
+    inc.value=v?v.toLocaleString("ja-JP"):"";
+    calc();
+  });
+
+  function calc(){
+    var income=num(inc.value);
+    if(income<10000){result.classList.remove('show');return;}
+    var d=DATA[type];
+    var saveLo=income*d.save[0]/100, saveHi=income*d.save[1]/100;
+    var fixed=income*FIXED/100;
+    var free=income-saveHi-fixed;
+    var fun=d.variable.filter(function(v){return d.fun.indexOf(v[0])>-1;})
+                      .reduce(function(a,v){return a+income*v[1]/100;},0);
+
+    document.getElementById('saveV').textContent=yen(saveLo)+"〜"+yen(saveHi);
+    document.getElementById('saveS').textContent="手取りの"+d.save[0]+"〜"+d.save[1]+"%";
+    document.getElementById('fixV').textContent=yen(fixed)+" 以内";
+    document.getElementById('freeV').textContent=yen(free);
+    document.getElementById('funV').textContent=yen(fun);
+
+    var maxPct=Math.max.apply(null,d.variable.map(function(v){return v[1];}));
+    var bars=document.getElementById('bars');
+    bars.innerHTML="";
+    d.variable.forEach(function(v){
+      var row=document.createElement('div');row.className="brow";
+      row.innerHTML='<div class="cap"><span class="n">'+v[0]+'</span><span class="a">'+yen(income*v[1]/100)+'（'+v[1]+'%）</span></div>'+
+        '<div class="track"><div class="fill" style="width:'+(v[1]/maxPct*100)+'%"></div></div>';
+      bars.appendChild(row);
+    });
+
+    result.classList.add('show');
+  }
+})();
+</script>
+</body>
+</html>
